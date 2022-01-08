@@ -75,6 +75,16 @@ async fn main() -> Result<(), std::io::Error> {
             }
         };
         Ok(res)
+    })
+    .delete(|req: Request<State> | async move {
+        let mut dinos = req.state().dinos.write().await;
+        let key: String = req.param("name")?.to_string();
+        let deleted = dinos.remove(&key);
+        let res = match deleted {
+            None => Response::new(404),
+            Some(_) => Response::new(204)
+        };
+        Ok(res)
     });
 
     app.listen("127.0.0.1:8080").await?;
