@@ -2,7 +2,7 @@ use async_std::sync::RwLock;
 use serde::{Deserialize, Serialize};
 use std::collections::hash_map::{HashMap, Entry};
 use std::sync::Arc;
-use tide::{Body, Request, Response};
+use tide::{Body, Request, Response, Server};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 struct Dino {
@@ -17,11 +17,17 @@ struct State {
 }
 
 #[async_std::main]
-async fn main() -> Result<(), std::io::Error> {
+async fn main() {
     tide::log::start();
+    let dinos_store = Default::default();
+    let app = server(dinos_store).await;
 
+    app.listen("127.0.0.1:8080").await.unwrap();
+}
+
+async fn server(dinos_store: Arc<RwLock<HashMap<String, Dino>>>) -> Server<State> {
     let state = State {
-        dinos: Default::default(),
+        dinos: dinos_store,
     };
 
     let mut app = tide::with_state(state);
@@ -87,6 +93,5 @@ async fn main() -> Result<(), std::io::Error> {
         Ok(res)
     });
 
-    app.listen("127.0.0.1:8080").await?;
-    Ok(())
+    app
 }
