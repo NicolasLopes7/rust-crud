@@ -95,3 +95,34 @@ async fn server(dinos_store: Arc<RwLock<HashMap<String, Dino>>>) -> Server<State
 
     app
 }
+
+#[async_std::test]
+async fn create_and_list_dinos() -> tide::Result<()> {
+    use tide::http::{Method, Request, Response, Url};
+
+    // Creating a dino and inserting into the state
+    let dino = Dino {
+        name: String::from("test"),
+        weight: 50,
+        diet: String::from("carnivorous")
+    };
+
+    let mut dinos_store = HashMap::new();
+    dinos_store.insert(dino.name.clone(), dino);
+
+    let dinos: Vec<Dino> = dinos_store.values().cloned().collect();
+    let dinos_as_string = serde_json::to_string(&dinos)?;
+
+    // Initializing the app with the previous created state
+    let state = Arc::new(RwLock::new(dinos_store));
+    let app = server(state).await;
+
+    // Do request
+    let url = Url::parse("https://example.com/dinos").unwrap();
+    let req = Request::new(Method::Get, url);
+    let mut res: Response = app.respond(req).await?;
+    let v = res.body_string().await?;
+
+    assert_eq!(dinos_as_string, v);
+    Ok(())
+}
